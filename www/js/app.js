@@ -214,6 +214,7 @@
     const rec = kind === "R";
     const title = rec ? "حزمة الاسترداد" : "حزمة الفلاش";
     if (!r) return `<div class="slot empty-slot"><h4>${title}</h4><span>غير متوفرة لهذا الإصدار</span></div>`;
+    if (r.pd && !r.u) return `<div class="slot"><h4>${title}</h4><span class="en">${rec ? "Recovery" : "Fastboot"}</span><span class="sz">${r.sz ? `الحجم: <bdi>${esc(r.sz)}</bdi>` : "الحجم غير معروف"}</span><span class="dl off">بانتظار الرابط الرسمي</span></div>`;
     const link = r.u ? `<a class="dl" href="${esc(r.u)}" target="_blank" rel="noopener noreferrer">${ICON.dl}<span>تنزيل</span></a>` : `<span class="dl off">الرابط غير موثوق</span>`;
     const md5 = r.md5 ? `<button class="cp" type="button" data-md5="${esc(r.md5)}">${ICON.cp}<span>نسخ بصمة MD5</span></button>` : "";
     return `<div class="slot"><h4>${title}</h4><span class="en">${rec ? "Recovery" : "Fastboot"}</span><span class="sz">${r.sz ? `الحجم: <bdi>${esc(r.sz)}</bdi>` : "الحجم غير معروف"}</span>${link}${md5}</div>`;
@@ -228,7 +229,7 @@
     </article>`;
   }
   function hbtn(r, ar, en, alt) {
-    if (!r || !r.u) return `<span class="hb ${alt ? "alt " : ""}off"><span class="t">${ICON.dl}${ar}</span><small>${en} · غير متوفرة</small></span>`;
+    if (!r || !r.u) return `<span class="hb ${alt ? "alt " : ""}off"><span class="t">${ICON.dl}${ar}</span><small>${en} · ${r && r.pd ? "بانتظار الرابط الرسمي" : "غير متوفرة"}</small></span>`;
     return `<a class="hb ${alt ? "alt" : ""}" href="${esc(r.u)}" target="_blank" rel="noopener noreferrer"><span class="t">${ICON.dl}${ar}</span><small>${en}${r.sz ? " · " + esc(r.sz) : ""}</small></a>`;
   }
   function renderDevice() {
