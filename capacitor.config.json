@@ -1,0 +1,13 @@
+{
+  "appId": "com.mazen.xiaomiupdates",
+  "appName": "Ehap TV",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

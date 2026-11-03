@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; font-src data:; img-src 'self' data:; connect-src 'self' https://raw.githubusercontent.com; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#eef1f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070f13" media="(prefers-color-scheme: dark)">
+<title>Ehap TV</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="splash" aria-hidden="true"><div class="sp-logo"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg></div><div class="sp-name">Ehap TV</div><div class="sp-sub">أحدث إصدارات أجهزة شاومي</div></div>
+<main id="view" class="view" aria-live="polite"><div class="boot">جارٍ تحميل الأجهزة…</div></main>
+
+<nav class="nav" id="dock" aria-label="التنقّل الرئيسي">
+  <div class="nav-in"><i class="pill"></i>
+    <button type="button" data-nav="#/" data-view="home" data-tab="home" aria-current="page"><i data-ico="navhome"></i>الرئيسية</button>
+    <button type="button" data-nav="#/fav" data-view="fav" data-tab="fav"><i data-ico="navstar"></i>المفضلة<b class="badge-n" id="favbadge" hidden></b></button>
+    <button type="button" data-nav="#/set" data-view="set" data-tab="set"><i data-ico="navset"></i>الإعدادات</button>
+  </div>
+</nav>
+
+<section class="sov" id="sov" hidden aria-label="البحث">
+  <div class="stop">
+    <div class="sfield" role="search">
+      <i data-ico="search"></i>
+      <label class="sr" for="q">ابحث عن جهازك</label>
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="اسم الجهاز أو رمزه">
+      <button class="clear" id="clear" type="button" aria-label="مسح البحث" hidden><i data-ico="x"></i></button>
+    </div>
+    <button class="cancel" type="button" data-closesearch>إلغاء</button>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="تصفية حسب العلامة"></div>
+  <div class="sres" id="sres"></div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<noscript><p class="boot">يتطلب هذا التطبيق تفعيل JavaScript.</p></noscript>
+<script src="js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
