@@ -20,7 +20,7 @@ import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -108,15 +108,21 @@ def to_rom(e):
     except (KeyError, TypeError):
         return None
     link = safe_link(e.get("link"))
-    if not (code and v and br and m and link and br in BRANCHES and m in METHODS):
+    if not (code and v and br and m and (link or e.get("pending")) and br in BRANCHES and m in METHODS):
         return None
     d = e.get("date")
-    return {
+    r = {
         "cn": code, "rg": "", "br": br, "m": m, "v": v,
         "an": str(e.get("android") or ""), "d": str(d) if d else "",
         "sz": str(e.get("size") or ""), "md5": str(e.get("md5") or "").lower(),
         "u": link, "nm": str(e.get("name") or ""),
     }
+    if not link:
+        r["pd"] = 1  # إصدار مبلَّغ عنه بانتظار الرابط الرسمي
+    cl = str(e.get("changelog") or "").strip()
+    if cl:
+        r["cl"] = cl[:MAX_CL]
+    return r
 
 
 def changelogs(src):
@@ -152,7 +158,7 @@ def load_state(out):
                 j = json.loads(f.read_text(encoding="utf-8"))
                 for r in j["roms"]:
                     r["u"] = safe_link(r.get("u"))
-                j["roms"] = [r for r in j["roms"] if r["u"]]
+                j["roms"] = [r for r in j["roms"] if r["u"] or r.get("pd")]
                 base = j.pop("base", j["codename"]); j.pop("scope", None); j["codename"] = base
                 cur = state.get(base)
                 if cur is None:
@@ -180,6 +186,8 @@ def merge(state, devnames, entries, cl_map):
         if not r:
             continue
         base = base_of(r["cn"])
+        if e.get("known_only") and base not in state:
+            continue  # لا ننشئ جهازاً جديداً من مصدر غير رسمي
         nm = devnames.get(r["cn"]) or r.pop("nm") or r["cn"]
         r.pop("nm", None)
         r["rg"] = region_of(r["cn"], nm)
@@ -191,10 +199,21 @@ def merge(state, devnames, entries, cl_map):
         if not any(x["id"] == r["rg"] and x["cn"] == r["cn"] for x in dev["regions"]):
             dev["regions"].append({"id": r["rg"], "cn": r["cn"], "name": nm})
         old = dev["_idx"].get(rom_key(r))
-        cl = cl_map.get(r["u"])
+        cl = cl_map.get(r["u"]) if r["u"] else None
+        same = [x for x in dev["roms"] if x["cn"] == r["cn"] and x["m"] == r["m"] and x["v"] == r["v"]]
+        if r.get("pd") and any(x["u"] for x in same):
+            continue  # الرابط الرسمي موجود فعلاً لهذا الإصدار
         if old is None:
-            if cl:
+            if cl and not r.get("cl"):
                 r["cl"] = cl
+            if r["u"]:  # وصل الرابط الرسمي: نستبدل المبلَّغ عنه ونحتفظ بملاحظاته
+                gone = [x for x in same if x.get("pd")]
+                if gone and not r.get("cl") and gone[0].get("cl"):
+                    r["cl"] = gone[0]["cl"]
+                if gone:
+                    dev["roms"] = [x for x in dev["roms"] if not x.get("pd") or x not in gone]
+                    for x in gone:
+                        dev["_idx"].pop(rom_key(x), None)
             dev["roms"].append(r)
             dev["_idx"][rom_key(r)] = r
             added += 1
@@ -202,6 +221,8 @@ def merge(state, devnames, entries, cl_map):
             for k in ("an", "sz", "md5", "u"):
                 if r[k]:
                     old[k] = r[k]
+            if r["u"]:
+                old.pop("pd", None)
             if r["d"] and (not old["d"]):
                 old["d"] = r["d"]
             if cl and not old.get("cl"):
@@ -402,6 +423,20 @@ def main():
         except Exception as ex:  # the fast lane must never break the main build
             print("telegram lane skipped:", ex, file=sys.stderr)
 
+    if a.telegram:
+        try:
+            from mukul_lane import fetch_entries as mukul_entries
+            ents = mukul_entries(SUFFIX)
+            n, t = merge(state, devnames, ents, {})
+            added += n
+            touched |= t
+            print(f"early lane: {len(ents)} posts read, {n} new")
+        except Exception as ex:  # مسار إضافي لا يوقف البناء الأساسي
+            print("early lane skipped:", ex, file=sys.stderr)
+
+    cutoff = (datetime.now(timezone.utc).date() - timedelta(days=21)).isoformat()
+    for dv in state.values():  # المبلَّغ عنه بلا رابط يُحذف بعد 21 يوماً
+        dv["roms"] = [x for x in dv["roms"] if not (x.get("pd") and (x.get("d") or "") < cutoff)]
     ndev, nroms, idx_body = write(out, state)
     idx_changed = put(out / "index.json", idx_body)
     sig_file = out / "index.sig"
