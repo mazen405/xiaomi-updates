@@ -187,6 +187,7 @@ def merge(state, devnames, entries, cl_map):
             continue
         base = base_of(r["cn"])
         if e.get("known_only") and base not in state:
+            print("  [early] جهاز غير موجود في القاعدة:", base, r.get("v", ""))
             continue  # لا ننشئ جهازاً جديداً من مصدر غير رسمي
         nm = devnames.get(r["cn"]) or r.pop("nm") or r["cn"]
         r.pop("nm", None)
