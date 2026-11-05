@@ -39,7 +39,7 @@ def _branch(status):
         return "Weekly"
     if "pilot" in s or "beta" in s:
         return "Stable Beta"
-    if "stable" in s or "official" in s:
+    if "stable" in s or "official" in s or "full release" in s:
         return "Stable"
     return ""
 
@@ -54,10 +54,39 @@ def _no(why, text=""):
     return None
 
 
-def parse_text(text, suffix_by_region, post_date=""):
+def parse_beta_post(text, suffix_by_region, names, post_date=""):
+    """صيغة: «#Xiaomi17 #HyperOS4 … Update Released For Beta Testers» ثم Version وحجم الحزمة.
+    الرابط في هذه المنشورات يشير إلى منشور تلجرام لا إلى ملف رسمي، فلا يُعتمد أبداً (الإصدار «بانتظار الرابط الرسمي»)."""
+    head = text.strip().splitlines()[0] if text.strip() else ""
+    if not re.search(r"released for beta", text[:300], re.I):
+        return None
+    m = re.search(r"Version:\s*([A-Z][A-Za-z0-9.]+)", text)
+    ver = m.group(1) if m else ""
+    cc = re.search(r"([A-Z]{2})XM$", ver)
+    region = VER_CC.get(cc.group(1)) if cc else None
+    if not ("." in ver and region in suffix_by_region):
+        return _no("إصدار بيتا: نسخة/منطقة غير مفهومة", head)
+    tags = [t for t in re.findall(r"#(\w+)", head.split("Released")[0])
+            if not re.match(r"(hyperos|miui|january|february|march|april|may|june|july|august|september|october|november|december)", t, re.I)]
+    base = next((names[re.sub(r"[^a-z0-9]", "", t.lower())] for t in tags
+                 if re.sub(r"[^a-z0-9]", "", t.lower()) in names), None)
+    if not base:
+        return _no("إصدار بيتا: جهاز غير معروف", head)
+    sz = re.search(r"size:\s*([\d.]+)\s*([KMG]B)", text, re.I)
+    size = f"{sz.group(1)} {sz.group(2).upper()}" if sz else ""
+    an = re.search(r"Android:\s*([\d.]+)", text)
+    return {"codename": base + suffix_by_region[region], "name": "", "branch": "Stable Beta", "method": "Recovery",
+            "version": ver, "android": an.group(1) if an else "", "date": post_date, "size": size, "md5": "",
+            "link": "", "pending": True, "changelog": "", "known_only": True}
+
+
+def parse_text(text, suffix_by_region, post_date="", names=None):
     """text: نص المنشور. يعيد إدخالاً بصيغة latest.yml أو None."""
     head = text.strip().splitlines()[0] if text.strip() else ""
     if "|" not in head:
+        e = parse_beta_post(text, suffix_by_region, names or {}, post_date)
+        if e:
+            return e
         return _no("ليس منشور إصدار", head if SKIP.get("ليس منشور إصدار", 0) < 30 else "")
     tags = re.findall(r"#(\w+)", head.split("|", 1)[1])
     by_norm = {r.lower().replace(" ", ""): r for r in suffix_by_region}
@@ -101,7 +130,7 @@ def parse_text(text, suffix_by_region, post_date=""):
             "link": link if ok else "", "pending": not ok, "changelog": cl, "known_only": True}
 
 
-def fetch_entries(suffix_by_region, pages=4):
+def fetch_entries(suffix_by_region, pages=4, names=None):
     entries, url = [], URL
     for _ in range(pages):
         html = _get(url)
@@ -121,7 +150,7 @@ def fetch_entries(suffix_by_region, pages=4):
                 br.replace_with("\n")
             t = msg.select_one("a.tgme_widget_message_date time")
             pd = t["datetime"][:10] if t is not None and t.has_attr("datetime") else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            e = parse_text(box.get_text(""), suffix_by_region, pd)
+            e = parse_text(box.get_text(""), suffix_by_region, pd, names)
             if e:
                 entries.append(e)
         if not ids:

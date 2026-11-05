@@ -427,7 +427,11 @@ def main():
     if a.telegram:
         try:
             from mukul_lane import fetch_entries as mukul_entries
-            ents = mukul_entries(SUFFIX)
+            nm = {}
+            for bs, dv in state.items():
+                for x in dv.get("names", []):
+                    nm.setdefault(re.sub(r"[^a-z0-9]", "", x.lower()), bs)
+            ents = mukul_entries(SUFFIX, names=nm)
             n, t = merge(state, devnames, ents, {})
             added += n
             touched |= t
