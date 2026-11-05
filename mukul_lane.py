@@ -58,7 +58,7 @@ def parse_text(text, suffix_by_region, post_date=""):
     """text: نص المنشور. يعيد إدخالاً بصيغة latest.yml أو None."""
     head = text.strip().splitlines()[0] if text.strip() else ""
     if "|" not in head:
-        return _no("ليس منشور إصدار")
+        return _no("ليس منشور إصدار", head if SKIP.get("ليس منشور إصدار", 0) < 30 else "")
     tags = re.findall(r"#(\w+)", head.split("|", 1)[1])
     by_norm = {r.lower().replace(" ", ""): r for r in suffix_by_region}
     region = next((by_norm[t.lower()] for t in tags if t.lower() in by_norm), None)
@@ -75,6 +75,7 @@ def parse_text(text, suffix_by_region, post_date=""):
     st = re.search(r"Status:\s*(.+)", text)
     branch = _branch(st.group(1)) if st else ""
     if not branch:
+        print("  [early] Status =", repr(st.group(1)[:60]) if st else "لا يوجد سطر Status")
         return _no("نوع الإصدار غير معروف", text)
     an = re.search(r"Android:\s*([\d.]+)", text)
     date = post_date
