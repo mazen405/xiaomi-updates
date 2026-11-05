@@ -46,6 +46,87 @@ jobs:
           grep -q usesCleartextTraffic "$f" || sed -i 's/<application/<application android:usesCleartextTraffic="false"/' "$f"
           grep -n "allowBackup\|usesCleartextTraffic" "$f"
 
+      - name: Edge-to-edge (status bar, navigation bar, window background)
+        run: |
+          pkg=com.mazen.xiaomiupdates
+          dir=android/app/src/main/java/com/mazen/xiaomiupdates
+          mkdir -p "$dir"
+          cat > "$dir/MainActivity.java" <<'JAVA'
+          package com.mazen.xiaomiupdates;
+
+          import android.os.Bundle;
+          import android.view.View;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.WebView;
+          import androidx.core.graphics.Insets;
+          import androidx.core.view.ViewCompat;
+          import androidx.core.view.WindowCompat;
+          import androidx.core.view.WindowInsetsCompat;
+          import androidx.core.view.WindowInsetsControllerCompat;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              private volatile int top = 0, bottom = 0;
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+                  final float d = getResources().getDisplayMetrics().density;
+                  final WebView wv = getBridge().getWebView();
+                  wv.addJavascriptInterface(new Object() {
+                      @JavascriptInterface public int top() { return Math.round(top / d); }
+                      @JavascriptInterface public int bottom() { return Math.round(bottom / d); }
+                      @JavascriptInterface public void light(final boolean l) {
+                          runOnUiThread(new Runnable() { public void run() {
+                              WindowInsetsControllerCompat c = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+                              c.setAppearanceLightStatusBars(l);
+                              c.setAppearanceLightNavigationBars(l);
+                          }});
+                      }
+                  }, "EhapInsets");
+                  View root = getWindow().getDecorView();
+                  ViewCompat.setOnApplyWindowInsetsListener(root, (v, ins) -> {
+                      Insets bars = ins.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+                      Insets ime = ins.getInsets(WindowInsetsCompat.Type.ime());
+                      top = bars.top;
+                      bottom = Math.max(bars.bottom, ime.bottom);
+                      wv.post(new Runnable() { public void run() {
+                          wv.evaluateJavascript("window.dispatchEvent(new Event('resize'))", null);
+                      }});
+                      return ViewCompat.onApplyWindowInsets(v, ins);
+                  });
+              }
+          }
+          JAVA
+          cat > android/app/src/main/res/values/ehap.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ehap_bg">#070f13</color>
+          </resources>
+          XML
+          python3 - <<'PY'
+          import re
+          f = "android/app/src/main/res/values/styles.xml"
+          s = open(f, encoding="utf-8").read()
+          items = """
+                  <item name="android:windowBackground">@color/ehap_bg</item>
+                  <item name="android:statusBarColor">@android:color/transparent</item>
+                  <item name="android:navigationBarColor">@android:color/transparent</item>
+                  <item name="android:enforceNavigationBarContrast">false</item>
+                  <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+          """
+          def add(name, extra):
+              global s
+              m = re.search(r'(<style name="%s"[^>]*>)' % re.escape(name), s)
+              if m:
+                  s = s[:m.end()] + extra + s[m.end():]
+          add("AppTheme.NoActionBar", items)
+          add("AppTheme.NoActionBarLaunch", '\n        <item name="android:windowBackground">@color/ehap_bg</item>')
+          open(f, "w", encoding="utf-8").write(s)
+          print(s)
+          PY
+
       - name: Sync
         run: npx cap sync android
 
