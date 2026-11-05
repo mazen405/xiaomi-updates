@@ -44,11 +44,21 @@ def _branch(status):
     return ""
 
 
+SKIP = {}
+
+
+def _no(why, text=""):
+    SKIP[why] = SKIP.get(why, 0) + 1
+    if text:
+        print("  [early] تخطّي (%s): %s" % (why, text.strip().splitlines()[0][:70]))
+    return None
+
+
 def parse_text(text, suffix_by_region, post_date=""):
     """text: نص المنشور. يعيد إدخالاً بصيغة latest.yml أو None."""
     head = text.strip().splitlines()[0] if text.strip() else ""
     if "|" not in head:
-        return None
+        return _no("ليس منشور إصدار")
     tags = re.findall(r"#(\w+)", head.split("|", 1)[1])
     by_norm = {r.lower().replace(" ", ""): r for r in suffix_by_region}
     region = next((by_norm[t.lower()] for t in tags if t.lower() in by_norm), None)
@@ -56,16 +66,16 @@ def parse_text(text, suffix_by_region, post_date=""):
     m = re.search(r"(?:HyperOS|MIUI)[^\n:]*:\s*([A-Z][A-Za-z0-9.]+)", text)
     ver = m.group(1) if m else ""
     if not (code and re.fullmatch(r"[A-Z0-9.]{6,}", ver) and "." in ver):
-        return None
+        return _no("إصدار/رمز غير مفهوم", text)
     if region is None:
         cc = re.search(r"([A-Z]{2})XM$", ver)
         region = VER_CC.get(cc.group(1)) if cc else None
     if region is None or region not in suffix_by_region:
-        return None
+        return _no("منطقة غير معروفة", text)
     st = re.search(r"Status:\s*(.+)", text)
     branch = _branch(st.group(1)) if st else ""
     if not branch:
-        return None
+        return _no("نوع الإصدار غير معروف", text)
     an = re.search(r"Android:\s*([\d.]+)", text)
     date = post_date
     d = re.search(r"Release:\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+)\s+(\d{4})", text)
@@ -90,7 +100,7 @@ def parse_text(text, suffix_by_region, post_date=""):
             "link": link if ok else "", "pending": not ok, "changelog": cl, "known_only": True}
 
 
-def fetch_entries(suffix_by_region, pages=2):
+def fetch_entries(suffix_by_region, pages=4):
     entries, url = [], URL
     for _ in range(pages):
         html = _get(url)
@@ -116,4 +126,5 @@ def fetch_entries(suffix_by_region, pages=2):
         if not ids:
             break
         url = f"{URL}?before={min(ids)}"
+    print("  [early] مقبول:", len(entries), "| متخطّى:", SKIP)
     return entries
