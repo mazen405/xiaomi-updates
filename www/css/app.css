@@ -379,3 +379,31 @@ html,body{background-image:radial-gradient(60% 40% at 100% 0,color-mix(in srgb,v
 .stat,.hero,.hhead{isolation:isolate}
 .hcard{width:196px}
 .hcard .hv{font-size:.72rem;letter-spacing:-.01em;padding:6px 8px}
+
+/* الشريط السفلي: زجاج معتم لا يظهر ما خلفه، والعدسة داخل حدوده */
+.nav-in{background:color-mix(in srgb,var(--surface) 90%,transparent);-webkit-backdrop-filter:blur(26px) saturate(1.6);backdrop-filter:blur(26px) saturate(1.6);border:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--line) 70%,transparent),0 20px 40px -18px rgba(0,0,0,.55)}
+.pill::before{width:calc(100% - 6px);border-radius:21px;background:color-mix(in srgb,var(--primary) 20%,transparent)}
+.nav-in.hold .pill::before{--ps:1.08;border-radius:23px;background:color-mix(in srgb,var(--primary) 24%,transparent);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--primary) 45%,transparent)}
+.nav-in.hold .pill{transform-origin:50% 50%}
+/* زر المسح في البحث */
+.clear{flex:none;width:30px;height:30px;padding:0;border-radius:50%;background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink2);display:grid;place-items:center;line-height:0}
+.clear i{display:grid;place-items:center;width:100%;height:100%;line-height:0}
+.clear svg{display:block;width:14px;height:14px;stroke-width:2.4}
+
+/* دخول الصفحات: سريع وهادئ، دون وميض فارغ */
+.view.enter>*{animation:fadeUp .34s var(--out) both;animation-delay:0s}
+.view.enter>*:nth-child(2){animation-delay:.03s}.view.enter>*:nth-child(3){animation-delay:.06s}.view.enter>*:nth-child(4){animation-delay:.09s}
+.view.enter>*:nth-child(5){animation-delay:.12s}.view.enter>*:nth-child(n+6){animation-delay:.14s}
+.view.enter .hcard{animation:fadeUp .4s var(--out) both}
+.view.enter .hcard:nth-child(1){animation-delay:.08s}.view.enter .hcard:nth-child(2){animation-delay:.12s}.view.enter .hcard:nth-child(3){animation-delay:.16s}.view.enter .hcard:nth-child(n+4){animation-delay:.2s}
+.view.enter.dev>*{animation-name:slideIn;animation-duration:.32s}
+.view.enter.dev .hero{animation-name:heroIn;animation-duration:.38s}
+@keyframes fadeUp{from{opacity:.001;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{opacity:.001;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes heroIn{from{opacity:.001;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.view.enter>*,.view.enter .hcard,.view.enter .hero{animation:none}}
+
+/* دخول طبيعي: الصفحة كلها بتلاشٍ خفيف فقط */
+.view.enter>*,.view.enter .hcard,.view.enter .hero,.view.enter.dev>*,.view.enter.dev .hero{animation:none!important}
+.view.enter{animation:pageFade .16s ease-out both}
+@keyframes pageFade{from{opacity:.4}to{opacity:1}}
