@@ -134,13 +134,28 @@ jobs:
         env:
           KS: ${{ secrets.DEBUG_KEYSTORE_B64 }}
         run: |
-          if [ -n "$KS" ]; then
-            mkdir -p ~/.android
-            echo "$KS" | base64 -d > ~/.android/debug.keystore
-            echo "stable key installed"
-          else
+          if [ -z "$KS" ]; then
             echo "::warning::DEBUG_KEYSTORE_B64 secret missing - build is signed with a random key"
+            exit 0
           fi
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/ehap.keystore"
+          mkdir -p ~/.android && cp "$RUNNER_TEMP/ehap.keystore" ~/.android/debug.keystore
+          cat >> android/app/build.gradle <<GRADLE
+
+          android {
+              signingConfigs {
+                  debug {
+                      storeFile file("$RUNNER_TEMP/ehap.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                      storeType "pkcs12"
+                  }
+              }
+          }
+          GRADLE
+          echo "stable key installed"
+          tail -n 14 android/app/build.gradle
 
       - name: Build debug APK
         working-directory: android
