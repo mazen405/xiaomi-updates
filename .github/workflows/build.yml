@@ -55,6 +55,7 @@ jobs:
           package com.mazen.xiaomiupdates;
 
           import android.os.Bundle;
+          import androidx.activity.OnBackPressedCallback;
           import android.view.View;
           import android.webkit.JavascriptInterface;
           import android.webkit.WebView;
@@ -67,6 +68,7 @@ jobs:
 
           public class MainActivity extends BridgeActivity {
               private volatile int top = 0, bottom = 0;
+              private OnBackPressedCallback backCb;
 
               @Override
               public void onCreate(Bundle savedInstanceState) {
@@ -96,6 +98,23 @@ jobs:
                       }});
                       return ViewCompat.onApplyWindowInsets(v, ins);
                   });
+                  backCb = new OnBackPressedCallback(true) {
+                      @Override public void handleOnBackPressed() {
+                          wv.evaluateJavascript("(function(){try{return window.__ehapBack?window.__ehapBack():false}catch(e){return false}})()", value -> {
+                              if (!"true".equals(value)) {
+                                  setEnabled(false);
+                                  getOnBackPressedDispatcher().onBackPressed();
+                              }
+                          });
+                      }
+                  };
+                  getOnBackPressedDispatcher().addCallback(this, backCb);
+              }
+
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  if (backCb != null) backCb.setEnabled(true);
               }
           }
           JAVA
