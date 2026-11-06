@@ -306,10 +306,13 @@
 
   async function openDevice(code, region) {
     S.code = code; S.dev = null; S.tab = "dev";
-    viewEl.innerHTML = '<div class="dbar"><button class="circ back" type="button" data-back aria-label="رجوع">' + ICON.back + '</button></div><div class="skel s1"></div><div class="skel s2"></div><div class="skel s3"></div>';
+    viewEl.innerHTML = '<div class="dbar"><button class="circ back" type="button" data-back aria-label="رجوع">' + ICON.back + '</button></div>';
     window.scrollTo(0, 0); setTab("");
+    /* لا نعرض الهياكل الرمادية إلا إذا تأخّر التحميل، فلا يومض شيء عند الدخول السريع */
+    const skelT = setTimeout(() => { if (S.code === code && !S.dev) viewEl.insertAdjacentHTML("beforeend", '<div class="skel s1"></div><div class="skel s2"></div><div class="skel s3"></div>'); }, 160);
     try {
       const dev = await X.getDevice(code);
+      clearTimeout(skelT);
       if (S.code !== code) return;
       S.dev = dev;
       const regs = X.regionsWithRoms(dev), pref = settings().region;
@@ -386,6 +389,13 @@
     if (S.stack.length > 1 && S.stack[S.stack.length - 2] === h) { S.stack.pop(); route(h); }
     else if (S.stack.length > 1 && S.stack[S.stack.length - 1] !== h && /^#\//.test(h)) { S.stack = [h]; route(h); }
   });
+
+  /* زر/إيماءة الرجوع في أندرويد: يرجع خطوة داخل التطبيق ولا يخرج إلا من الرئيسية */
+  window.__ehapBack = function () {
+    if (!sov.hidden || S.stack.length > 1) { back(); return true; }
+    if (S.tab !== "home") { navTab("#/"); return true; }
+    return false;
+  };
 
   /* ---------- الأحداث ---------- */
   let qT;
