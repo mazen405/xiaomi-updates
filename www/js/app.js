@@ -65,10 +65,26 @@
   const DEF = { theme: "auto", size: "m", region: "Global", notify: true };
   const settings = () => Object.assign({}, DEF, X.store.get("settings") || {});
   function setSetting(k, v) { const s = settings(); s[k] = v; X.store.set("settings", s); applySettings(); }
+  function applyInsets() {
+    try {
+      const b = window.EhapInsets; if (!b) return;
+      const r = document.documentElement.style;
+      r.setProperty("--sat", b.top() + "px"); r.setProperty("--sab", b.bottom() + "px");
+    } catch (e) { /* خارج التطبيق الأصلي */ }
+  }
+  function applyBars() {
+    try {
+      const b = window.EhapInsets; if (!b) return;
+      const t = document.documentElement.getAttribute("data-theme");
+      b.light(t === "light" || (t !== "dark" && !(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)));
+    } catch (e) { /* خارج التطبيق الأصلي */ }
+  }
+  applyInsets(); window.addEventListener("resize", applyInsets);
   function applySettings() {
     const s = settings(), r = document.documentElement;
     if (s.theme === "light" || s.theme === "dark") r.setAttribute("data-theme", s.theme); else r.removeAttribute("data-theme");
     if (s.size === "s" || s.size === "l") r.setAttribute("data-size", s.size); else r.removeAttribute("data-size");
+    applyBars();
   }
   const favs = () => { const f = X.store.get("favs"); return Array.isArray(f) ? f : []; };
   const seen = () => X.store.get("seen") || {};
@@ -278,7 +294,14 @@
         : `<div class="empty"><b>لا توجد إصدارات بهذا الفلتر</b>اختر «الكل» لعرض كل الإصدارات في هذه المنطقة.</div>`;
       if (shown.length > S.relShown) h += `<button class="more" type="button" data-relmore>عرض إصدارات أقدم (${num(shown.length - S.relShown)} متبقياً)</button>`;
     }
+    const oldTabs = viewEl.querySelector(".tabs"), keep = oldTabs ? oldTabs.scrollLeft : null;
     viewEl.innerHTML = h;
+    const tb = viewEl.querySelector(".tabs"), act = tb && tb.querySelector('[aria-selected="true"]');
+    if (tb && act) {
+      if (keep !== null) tb.scrollLeft = keep;
+      const target = act.offsetLeft - (tb.clientWidth - act.offsetWidth) / 2;
+      try { tb.scrollTo({ left: target, behavior: keep !== null && !reduce ? "smooth" : "auto" }); } catch (e) { tb.scrollLeft = target; }
+    }
   }
 
   async function openDevice(code, region) {
@@ -400,7 +423,7 @@
     if (d.region) {
       S.region = d.region; S.branch = "all"; S.relShown = 20;
       const nh = "#/d/" + encodeURIComponent(S.code) + "/" + encodeURIComponent(S.region); S.stack[S.stack.length - 1] = nh; setHash(nh, true);
-      renderDevice(); window.scrollTo(0, 0); return;
+      const y = window.scrollY; renderDevice(); window.scrollTo(0, y); return;
     }
     if (d.branch) { S.branch = d.branch; S.relShown = 20; renderDevice(); return; }
     if (d.jump !== undefined) {
